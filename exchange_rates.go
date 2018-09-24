@@ -145,7 +145,10 @@ func (provider *ExchangeRateProvider) fetch() (err error) {
 }
 
 func (b OpenBazaarDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
-	data := dat.(map[string]interface{})
+	data, ok := dat.(map[string]interface{})
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
+	}
 
 	zec, ok := data["ZEC"]
 	if !ok {
@@ -299,25 +302,28 @@ func (b PoloniexDecoder) decode(dat interface{}, cache map[string]float64, bp *e
 	if err != nil {
 		return err
 	}
-	data := dat.(map[string]interface{})
-	var rate float64
-	for k, v := range data {
-		if k == "BTC_ZEC" {
-			val, ok := v.(map[string]interface{})
-			if !ok {
-				return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
-			}
-			s, ok := val["last"].(string)
-			if !ok {
-				return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed, missing 'last' (string) field")
-			}
-			price, err := strconv.ParseFloat(s, 64)
-			if err != nil {
-				return err
-			}
-			rate = price
-		}
+	data, ok := dat.(map[string]interface{})
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
 	}
+	var rate float64
+	v, ok := data["BTC_ZEC"]
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
+	}
+	val, ok := v.(map[string]interface{})
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
+	}
+	s, ok := val["last"].(string)
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed, missing 'last' (string) field")
+	}
+	price, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return err
+	}
+	rate = price
 	if rate == 0 {
 		return errors.New("Bitcoin-Zcash price data not available")
 	}
