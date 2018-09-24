@@ -1,4 +1,4 @@
-package zcashd
+package exchangerates
 
 import (
 	"encoding/json"

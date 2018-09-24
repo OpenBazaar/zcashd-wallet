@@ -12,6 +12,7 @@ import (
 	"github.com/OpenBazaar/bitcoind-wallet"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
+	"github.com/OpenBazaar/zcashd-wallet/exchangerates"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -25,6 +26,7 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
+	"golang.org/x/net/proxy"
 	"os"
 	"os/exec"
 	"path"
@@ -32,7 +34,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"golang.org/x/net/proxy"
 )
 
 var log = logging.MustGetLogger("zcashd")
@@ -98,7 +99,7 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 		initChan:         make(chan struct{}),
 	}
 	if !disableExchangeRates {
-		w.exchangeRates = NewZcashPriceFetcher(proxy)
+		w.exchangeRates = exchangerates.NewZcashPriceFetcher(proxy)
 	}
 	return &w, nil
 }
