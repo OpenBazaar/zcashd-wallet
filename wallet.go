@@ -9,6 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/OpenBazaar/bitcoind-wallet"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
@@ -27,13 +35,6 @@ import (
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
-	"os"
-	"os/exec"
-	"path"
-	"runtime"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var log = logging.MustGetLogger("zcashd")
@@ -544,7 +545,7 @@ func (w *ZcashdWallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error) {
 	return m, nil
 }
 
-func (w *ZcashdWallet) Spend(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
+func (w *ZcashdWallet) Spend(amount int64, addr btc.Address, feeLevel wallet.FeeLevel, referenceID string) (*chainhash.Hash, error) {
 	<-w.initChan
 	tx, err := w.buildTx(amount, addr, feeLevel)
 	if err != nil {
