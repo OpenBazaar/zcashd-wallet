@@ -9,6 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/OpenBazaar/bitcoind-wallet"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
@@ -27,13 +35,6 @@ import (
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
-	"os"
-	"os/exec"
-	"path"
-	"runtime"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var log = logging.MustGetLogger("zcashd")
@@ -475,6 +476,34 @@ func (w *ZcashdWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
 	t.Height = int32(resp.BlockIndex)
 	t.Timestamp = time.Unix(resp.TimeReceived, 0)
 	t.WatchOnly = false
+
+	tx := wire.NewMsgTx(1)
+	rbuf := bytes.NewReader([]byte(resp.Hex))
+	err = tx.BtcDecode(rbuf, wire.ProtocolVersion, wire.WitnessEncoding)
+	if err != nil {
+		return t, err
+	}
+	outs := []wallet.TransactionOutput{}
+	for i, out := range tx.TxOut {
+		var addr btc.Address
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, w.params)
+		if err != nil {
+			log.Warningf("error extracting address from txn pkscript: %v\n", err)
+		}
+		if len(addrs) == 0 {
+			addr = nil
+		} else {
+			addr = addrs[0]
+		}
+		tout := wallet.TransactionOutput{
+			Address: addr,
+			Value:   out.Value,
+			Index:   uint32(i),
+		}
+		outs = append(outs, tout)
+	}
+	t.Outputs = outs
+
 	return t, nil
 }
 
@@ -1070,4 +1099,11 @@ func (w *ZcashdWallet) Close() {
 
 func (w *ZcashdWallet) ExchangeRates() wallet.ExchangeRates {
 	return w.exchangeRates
+}
+
+// AssociateTransactionWithOrder used for ORDER_PAYMENT message
+func (w *ZcashdWallet) AssociateTransactionWithOrder(txnCB wallet.TransactionCallback) {
+	for _, l := range w.listeners {
+		go l(txnCB)
+	}
 }
